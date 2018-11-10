@@ -12,7 +12,7 @@ config.read('ViewConfig.ini')
 dir_path = str(config['Controller']['corpus_path'])
 percentage_of_division = float(config['Controller']['percentage_of_division'])
 
-
+print("second commit")
 def start_search_engine():
     list = os.listdir(dir_path)
     the_total_number_of_files = len(list)
