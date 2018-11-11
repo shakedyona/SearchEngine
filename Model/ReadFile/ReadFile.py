@@ -54,8 +54,8 @@ def read_file(file_path, the_all_doc_in_all_folders):
                 only_text = text_part.split("</TEXT>")
                 only_text_part = only_text[0].split()
 
-                for word in only_text_part:
-                    doc_text = doc_text + word + " "
+                doc_text = " ".join(word for word in only_text_part)
+
             else:
                 head_part = all_doc
             part_doc_id = head_part.split("<DOCNO>")

@@ -39,11 +39,11 @@ def start_search_engine():
         parse_and_stemming_and_update(all_document,read_file_packet,terms_packet)
         # posting
         posting_id = posting_id + 1
-        Indexer.create_temp_posting_packet(posting_id,terms_packet,posting_terms_packet_dictionary)
+        Indexer.create_temp_posting_packet(posting_id,terms_packet)
 
     # Outside the loop
     # merge all posting
-    Indexer.merge_all_posting(posting_id,len(all_document),posting_terms_packet_dictionary,the_final_terms_dictionary)
+    Indexer.merge_all_posting(posting_id,len(all_document),the_final_terms_dictionary)
     end_time = time.time()
     print("total time: " + str(end_time - start_time))
 
