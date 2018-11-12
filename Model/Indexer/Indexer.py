@@ -3,22 +3,32 @@ final_abc_posting_file: [term] - (doc_1,3) | (doc_8,2)......
 '''
 import configparser
 from numpy import log2
-from itertools import chain
-from collections import defaultdict
-
-config = configparser.ConfigParser()
-config.read('ViewConfig.ini')
-path_folder_posting = str(config['Indexer']['path_folder_temp_posting'])
-path_folder_abc_posting = str(config['Indexer']['path_folder_abc_posting'])
+import os
+import shutil
+import glob
 
 
-def create_temp_posting_packet(posting_id,terms_packet):
+def init_path(stemming_mode):
+    config = configparser.ConfigParser()
+    config.read('ViewConfig.ini')
+    if stemming_mode == 'yes':
+        path_folder_posting = str(config['Indexer']['path_folder_temp_posting_stemming'])
+        path_folder_abc_posting = str(config['Indexer']['path_folder_abc_posting_stemming'])
+    elif stemming_mode == 'no':
+        path_folder_posting = str(config['Indexer']['path_folder_temp_posting_without_stemming'])
+        path_folder_abc_posting = str(config['Indexer']['path_folder_abc_posting_without_stemming'])
+    return path_folder_posting,path_folder_abc_posting
+    print("init")
+
+
+def create_temp_posting_packet(stemming_mode,posting_id,terms_packet):
+    path_folder_posting , path_folder_abc_posting = init_path(stemming_mode)
     print("posting_id: " + str(posting_id))
-    save_temp_posting_on_disk(posting_id,terms_packet)
+    save_temp_posting_on_disk(posting_id,terms_packet,path_folder_posting,path_folder_abc_posting)
     print("final write packet")
 
 
-def save_temp_posting_on_disk(posting_id,terms_packet):
+def save_temp_posting_on_disk(posting_id,terms_packet,path_folder_posting,path_folder_abc_posting):
     file_path = path_folder_posting + "\TempPostings" + str(posting_id) + '.txt'
     temp_terms_items = terms_packet.items()
     # sort by value term
@@ -44,7 +54,8 @@ def save_temp_posting_on_disk(posting_id,terms_packet):
 
 
 # terms_packet = { t1 : { (d1, 2), (d3, 1), (d4, 2) }, t2 : { (d1, 2), (d3, 1), (d4, 2) }}
-def merge_all_posting(posting_id,number_doc_in_corpus,the_final_terms_dictionary):
+def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_terms_dictionary):
+    path_folder_posting, path_folder_abc_posting = init_path(stemming_mode)
     print("merge_all_posting")
     finish = False
     number_of_line_in_abc_posting = {}
@@ -67,10 +78,9 @@ def merge_all_posting(posting_id,number_doc_in_corpus,the_final_terms_dictionary
         min_term = min(term_first_line_postings.values())
         # sumtf,df,idf
         sum_tf = 0
-        df = 0
         N = number_doc_in_corpus
         df = 0
-        list_doc = "" 
+        list_doc = ""
         all_posting_file_with_equal_term = []
         for index,term in term_first_line_postings.items():
             if min_term == term:
@@ -95,35 +105,35 @@ def merge_all_posting(posting_id,number_doc_in_corpus,the_final_terms_dictionary
 def create_final_posting(path_folder_abc_posting,number_of_line_in_abc_posting):
     all_final_posting = {}
     post1_path = path_folder_abc_posting + "\FinalPostings_a.txt"
-    all_final_posting["a"] = open(post1_path, "w")
+    all_final_posting["a"] = open(post1_path, "w+")
     number_of_line_in_abc_posting["a"] = 0
 
     post2_path = path_folder_abc_posting + "\FinalPostings_bc.txt"
-    all_final_posting["bc"] = open(post2_path, "w")
+    all_final_posting["bc"] = open(post2_path, "w+")
     number_of_line_in_abc_posting["bc"] = 0
 
     post3_path = path_folder_abc_posting + "\FinalPostings_defg.txt"
-    all_final_posting["defg"] = open(post3_path, "w")
+    all_final_posting["defg"] = open(post3_path, "w+")
     number_of_line_in_abc_posting["defg"] = 0
 
     post4_path = path_folder_abc_posting + "\FinalPostings_hijkl.txt"
-    all_final_posting["hijkl"] = open(post4_path, "w")
+    all_final_posting["hijkl"] = open(post4_path, "w+")
     number_of_line_in_abc_posting["hijkl"] = 0
 
     post5_path = path_folder_abc_posting + "\FinalPostings_mnop.txt"
-    all_final_posting["mnop"] = open(post5_path, "w")
+    all_final_posting["mnop"] = open(post5_path, "w+")
     number_of_line_in_abc_posting["mnop"] = 0
 
     post6_path = path_folder_abc_posting + "\FinalPostings_qrs.txt"
-    all_final_posting["qrs"] = open(post6_path, "w")
+    all_final_posting["qrs"] = open(post6_path, "w+")
     number_of_line_in_abc_posting["qrs"] = 0
 
     post7_path = path_folder_abc_posting + "\FinalPostings_tuvwxyz.txt"
-    all_final_posting["tuvwxyz"] = open(post7_path, "w")
+    all_final_posting["tuvwxyz"] = open(post7_path, "w+")
     number_of_line_in_abc_posting["tuvwxyz"] = 0
 
     post8_path = path_folder_abc_posting + "\FinalPostings_notLetters.txt"
-    all_final_posting["notLetters"] = open(post8_path, "w")
+    all_final_posting["notLetters"] = open(post8_path, "w+")
     number_of_line_in_abc_posting["notLetters"] = 0
 
     return all_final_posting
@@ -174,21 +184,25 @@ def find_abc_posting(min_term):
     else:
         return "notLetters"
 
-'''
-def find_list_doc_freq_of_term(posting_terms_packet_dictionary,min_term):
-    list_doc = ""
-    for post_id, packet_term in posting_terms_packet_dictionary.items():
-        if min_term in packet_term:
-            # sort (doc_id,freq) by freq
-            list_sort = sorted(packet_term[min_term].items(), key=lambda term: term[1])
-            for doc_id, freq in list_sort:
-                list_doc = list_doc + "|" + "(" + str(doc_id) + "," + str(freq)+ ")"
-
-    return list_doc
-'''
-
 
 def close_all_files(all_final_posting_path):
     for id,file in all_final_posting_path.items():
         print("close- "+id)
         file.close()
+
+
+def reset():
+    print("reset - indexer")
+    path_folder_posting, path_folder_abc_posting = init_path("yes")
+
+    for file in glob.glob(path_folder_posting+ "/*"):
+            os.remove(file)
+    for file in glob.glob(path_folder_abc_posting+ "/*"):
+            os.remove(file)
+
+    path_folder_posting, path_folder_abc_posting = init_path("no")
+    for file in glob.glob(path_folder_posting+ "/*"):
+            os.remove(file)
+    for file in glob.glob(path_folder_abc_posting+ "/*"):
+            os.remove(file)
+

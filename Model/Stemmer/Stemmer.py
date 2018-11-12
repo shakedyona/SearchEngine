@@ -40,3 +40,8 @@ def stemming(parse_terms_doc):
 
     return result_stamming
     
+
+def reset():
+    print("reset - stemmer")
+    terms_previously_read = {}  # [parse_term] = stemming_term
+    stemmer = EnglishStemmer()

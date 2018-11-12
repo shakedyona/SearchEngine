@@ -71,3 +71,6 @@ def read_file(file_path, the_all_doc_in_all_folders):
             single_document = [file_id, doc_id, doc_text, doc_city]
             the_all_doc_in_all_folders[doc_id] = single_document
             i = i + 1
+
+def reset():
+    print("reset - readfaile")

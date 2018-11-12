@@ -2,7 +2,7 @@ from Controller import Controller
 
 
 def main():
-    controller = Controller.start_search_engine()
+    controller = Controller.init_path()
 
 
 main()
