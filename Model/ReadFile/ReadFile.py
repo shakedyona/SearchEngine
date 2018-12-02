@@ -45,7 +45,7 @@ def read_file(file_path, the_all_doc_in_all_folders):
     for all_doc in list_of_doc:
         doc_text = ""
         doc_id = ""
-        doc_city = ""
+        doc_city = []
         if i < (len_list):
             if "<TEXT>" in all_doc:
                 all_doc_split = all_doc.split("<TEXT>")
@@ -65,9 +65,12 @@ def read_file(file_path, the_all_doc_in_all_folders):
 
             if "<F P=104>" in head_part:
                 part_doc_city = head_part.split("<F P=104>")
-                part_doc_city = part_doc_city[1].rstrip().split()
-                doc_city = part_doc_city[0]
-
+                part_doc_city = part_doc_city[1:]
+                for city in part_doc_city:
+                    city = city.split()
+                    city = city[0]
+                    position = all_doc.find(city)
+                    doc_city.append([city,position])
             single_document = [file_id, doc_id, doc_text, doc_city]
             the_all_doc_in_all_folders[doc_id] = single_document
             i = i + 1

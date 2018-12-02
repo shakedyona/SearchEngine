@@ -1,12 +1,17 @@
 '''
 final_abc_posting_file: [term] - (doc_1,3) | (doc_8,2)......
 '''
+import ast
 import configparser
+import json
+
 from numpy import log2
 import os
 import shutil
 import glob
 
+from Model.Stemmer import Stemmer
+sum_numbers =0
 
 def init_path(stemming_mode):
     config = configparser.ConfigParser()
@@ -17,18 +22,18 @@ def init_path(stemming_mode):
     elif stemming_mode == 'no':
         path_folder_posting = str(config['Indexer']['path_folder_temp_posting_without_stemming'])
         path_folder_abc_posting = str(config['Indexer']['path_folder_abc_posting_without_stemming'])
-    return path_folder_posting,path_folder_abc_posting
+    return path_folder_posting,path_folder_abc_posting,stemming_mode
     print("init")
 
 
 def create_temp_posting_packet(stemming_mode,posting_id,terms_packet):
-    path_folder_posting , path_folder_abc_posting = init_path(stemming_mode)
+    path_folder_posting , path_folder_abc_posting ,stemming_mode= init_path(stemming_mode)
     print("posting_id: " + str(posting_id))
-    save_temp_posting_on_disk(posting_id,terms_packet,path_folder_posting,path_folder_abc_posting)
+    save_temp_posting_on_disk(posting_id,terms_packet,path_folder_posting)
     print("final write packet")
 
 
-def save_temp_posting_on_disk(posting_id,terms_packet,path_folder_posting,path_folder_abc_posting):
+def save_temp_posting_on_disk(posting_id,terms_packet,path_folder_posting):
     file_path = path_folder_posting + "\TempPostings" + str(posting_id) + '.txt'
     temp_terms_items = terms_packet.items()
     # sort by value term
@@ -47,15 +52,19 @@ def save_temp_posting_on_disk(posting_id,terms_packet,path_folder_posting,path_f
             sort_value = list(reversed(sorted(temp_terms_value, key=lambda freq: freq[1])))
             for doc,freq in sort_value:
                 total_freq = total_freq + freq
-                doc_freq_str = doc_freq_str + "|(" + str(doc) + "," + str(freq) + ")"
-            posting_file.write(term + "-->" + str(total_freq) + doc_freq_str + '\n')
+                if len(doc_freq_str) > 1:
+                    doc_freq_str = doc_freq_str + r',"' + str(doc) + r'":' + str(freq)
+                else:
+                    doc_freq_str = doc_freq_str + r'"' + str(doc) + r'":' + str(freq)
+            posting_file.write(term + "-->" + str(total_freq) + "(#){" + doc_freq_str + "}" + '\n')
 
         posting_file.close()
 
 
 # terms_packet = { t1 : { (d1, 2), (d3, 1), (d4, 2) }, t2 : { (d1, 2), (d3, 1), (d4, 2) }}
-def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_terms_dictionary):
-    path_folder_posting, path_folder_abc_posting = init_path(stemming_mode)
+def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_terms_dictionary,cach_dictionary):
+    #check_uppercase()
+    path_folder_posting, path_folder_abc_posting,stemming_mode = init_path(stemming_mode)
     print("merge_all_posting")
     finish = False
     number_of_line_in_abc_posting = {}
@@ -63,6 +72,13 @@ def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_te
     term_first_line_postings = {}
     freq_sum_doc_first_line_postings = {}
     the_open_posting_file = {}
+    if stemming_mode == 'yes':
+        stemm_dictionary = Stemmer.get_dictionary()# all stemming_term
+    elif stemming_mode == 'no':
+        stemm_dictionary = Stemmer.get_dictionary_without_stemming()  # all stemming_term
+    cach_dictionary.clear()
+    terms_to_updated = {}  # The terms are in lower case letters
+
 
     close_file ={}
     # save the first line of each temp posting
@@ -74,32 +90,77 @@ def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_te
         find_first_line(curr_posting_file,index_file_of_posting,term_first_line_postings,freq_sum_doc_first_line_postings,close_file)
 
     while not finish:
-        min_temp_posting = min(term_first_line_postings.keys(), key=(lambda index_post: term_first_line_postings[index_post]))
+        #min_temp_posting = min(term_first_line_postings.keys(), key=(lambda index_post: term_first_line_postings[index_post]))
         min_term = min(term_first_line_postings.values())
-        # sumtf,df,idf
-        sum_tf = 0
-        N = number_doc_in_corpus
-        df = 0
-        list_doc = ""
         all_posting_file_with_equal_term = []
-        for index,term in term_first_line_postings.items():
+        list_doc = {}
+        sum_tf = 0
+        df = 0
+        if min_term == "thank" or min_term == "THANK":
+            print("loko")
+        for index, term in term_first_line_postings.items():
             if min_term == term:
                 all_posting_file_with_equal_term.append(index)
                 sum_tf = sum_tf + int((freq_sum_doc_first_line_postings[index])[0])
                 df = df + int((freq_sum_doc_first_line_postings[index])[1])
-                list_doc = list_doc + (freq_sum_doc_first_line_postings[index])[2]
-
-        idf = log2(N / df)
-
-        the_abc_posting_name = find_abc_posting(min_term)
-        all_final_posting_path[the_abc_posting_name].write(min_term + "-->" + str(sum_tf)+ list_doc + '\n')
-        number_of_line_in_abc_posting[the_abc_posting_name] = number_of_line_in_abc_posting[the_abc_posting_name] + 1
-        the_final_terms_dictionary[min_term] = (df,idf,sum_tf,the_abc_posting_name,number_of_line_in_abc_posting[the_abc_posting_name])
+                list_doc.update((freq_sum_doc_first_line_postings[index])[2])
+        # Handling capitalization !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if min_term[0].isupper(): # Party # The
+            lowercase_term = min_term.lower() # party # the
+            if lowercase_term in stemm_dictionary:
+                if stemming_mode == 'yes':
+                    lowercase_term_after_stemm = stemm_dictionary[lowercase_term] # parti # the
+                else:
+                    lowercase_term_after_stemm = lowercase_term
+                if lowercase_term_after_stemm in terms_to_updated:
+                    sum_tf = sum_tf + terms_to_updated[lowercase_term_after_stemm][0]
+                    list_doc.update(terms_to_updated[lowercase_term_after_stemm][1])
+                    terms_to_updated[lowercase_term_after_stemm] = (sum_tf, list_doc)
+                else:
+                    terms_to_updated[lowercase_term_after_stemm] = (sum_tf,list_doc)
+                #stemm_dictionary.pop(lowercase_term)
+            else:
+                cach_dictionary[min_term] = sum_tf
+                #print("final posting: " + min_term)
+                calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary)
+        else:
+            if min_term in terms_to_updated: # parti #the
+                sum_tf = sum_tf + terms_to_updated[min_term][0]
+                cach_dictionary[min_term] = sum_tf
+                list_doc.update(terms_to_updated[min_term][1])
+                #print("final posting: " + min_term)
+                calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary)
+            else:
+                #print("final posting: " + min_term)
+                cach_dictionary[min_term] = sum_tf
+                calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary)
 
         for i in all_posting_file_with_equal_term:
             find_first_line(the_open_posting_file[i], i, term_first_line_postings,freq_sum_doc_first_line_postings, close_file)
+
         finish = check_if_finish(close_file)
+
+    ## out while
     close_all_files(all_final_posting_path)
+    Stemmer.reset()
+    #print("cach_dictionary")
+    #print(cach_dictionary)
+    return sum_numbers
+
+
+def calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary):
+    # sumtf , df ,idf
+    N = number_doc_in_corpus
+    idf = log2(N / df)
+    sort_list_doc = list(reversed(sorted(list_doc.items(), key=lambda freq: freq[1])))
+    the_abc_posting_name = find_abc_posting(min_term)
+    # print("shaked " + min_term)
+    # print(the_abc_posting_name)
+    # print(sum_tf)
+    # print(sort_list_doc)
+    all_final_posting_path[the_abc_posting_name].write(min_term + "-->" + str(sum_tf) + str(sort_list_doc) + '\n')
+    number_of_line_in_abc_posting[the_abc_posting_name] = number_of_line_in_abc_posting[the_abc_posting_name] + 1
+    the_final_terms_dictionary[min_term] = (df, idf, sum_tf, the_abc_posting_name, number_of_line_in_abc_posting[the_abc_posting_name])
 
 
 def create_final_posting(path_folder_abc_posting,number_of_line_in_abc_posting):
@@ -144,13 +205,13 @@ def find_first_line(curr_posting_file,index_file_of_posting,term_first_line_post
     if curr_line:
         curr_line_split = curr_line.split("-->")
         term_in_first_line = curr_line_split[0]
-        part_of_doc_freq = curr_line_split[1].split("|")
+        part_of_doc_freq = curr_line_split[1].split("(#)")
         total_freq_in_first_line = part_of_doc_freq[0]
-        length = len(part_of_doc_freq)
-        number_doc = length -1
-        list_doc = "|".join(part_of_doc_freq[1:length])
+        doc_freq = part_of_doc_freq[1]
+        doc_freq = json.loads(doc_freq)
+        number_doc = len(doc_freq)
         term_first_line_postings[index_file_of_posting] = term_in_first_line
-        freq_sum_doc_first_line_postings[index_file_of_posting] = [total_freq_in_first_line.strip(),number_doc,list_doc.strip()]
+        freq_sum_doc_first_line_postings[index_file_of_posting] = [total_freq_in_first_line.strip(), number_doc,doc_freq]
     else:  # end of posting file
         print("end!!!!!!!!!!!!!!!!: "+str(index_file_of_posting))
         curr_posting_file.close()
@@ -165,21 +226,34 @@ def check_if_finish(close_file):
             return False
     return True
 
+
+def isfloat(value):
+  try:
+    float(value)
+    return True
+  except ValueError:
+    return False
+
+
+
 def find_abc_posting(min_term):
+    global sum_numbers
+    if isfloat(min_term):
+        sum_numbers = sum_numbers + 1
     first_char = min_term[0]
-    if first_char == 'a':
+    if first_char == 'a' or first_char == 'A':
         return "a"
-    elif first_char in "bc":
+    elif first_char in "bcBC":
         return "bc"
-    elif first_char in "defg":
+    elif first_char in "defgDEFG":
         return "defg"
-    elif first_char in "hijkl":
+    elif first_char in "hijklHIJKL":
         return "hijkl"
-    elif first_char in "mnop":
+    elif first_char in "mnopMNOP":
         return "mnop"
-    elif first_char in "qrs":
+    elif first_char in "qrsQRS":
         return "qrs"
-    elif first_char in "tuvwxyz":
+    elif first_char in "tuvwxyzTUVWXYZ":
         return "tuvwxyz"
     else:
         return "notLetters"
@@ -191,16 +265,24 @@ def close_all_files(all_final_posting_path):
         file.close()
 
 
+def handling_capitalization(term):
+    print("handling_capitalization")
+    if term[0].isupper():
+        lowercase_term = term.lower()
+
+
+
+
 def reset():
     print("reset - indexer")
-    path_folder_posting, path_folder_abc_posting = init_path("yes")
+    path_folder_posting, path_folder_abc_posting,stemming_mode = init_path("yes")
 
     for file in glob.glob(path_folder_posting+ "/*"):
             os.remove(file)
     for file in glob.glob(path_folder_abc_posting+ "/*"):
             os.remove(file)
 
-    path_folder_posting, path_folder_abc_posting = init_path("no")
+    path_folder_posting, path_folder_abc_posting,stemming_mode = init_path("no")
     for file in glob.glob(path_folder_posting+ "/*"):
             os.remove(file)
     for file in glob.glob(path_folder_abc_posting+ "/*"):
