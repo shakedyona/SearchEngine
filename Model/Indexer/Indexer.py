@@ -10,24 +10,27 @@ import os
 import shutil
 import glob
 
+from Controller import Controller
 from Model.Stemmer import Stemmer
 sum_numbers =0
 
 def init_path(stemming_mode):
-    config = configparser.ConfigParser()
-    config.read('ViewConfig.ini')
+    print("init_path - indexer")
     if stemming_mode == 'yes':
-        path_folder_posting = str(config['Indexer']['path_folder_temp_posting_stemming'])
-        path_folder_abc_posting = str(config['Indexer']['path_folder_abc_posting_stemming'])
+        path_folder_posting = Controller.get_peth_posting()+'/'+"Stemming/TempPostings"
+        path_folder_abc_posting = Controller.get_peth_posting()+'/'+"Stemming/ABC_Posting"
     elif stemming_mode == 'no':
-        path_folder_posting = str(config['Indexer']['path_folder_temp_posting_without_stemming'])
-        path_folder_abc_posting = str(config['Indexer']['path_folder_abc_posting_without_stemming'])
+        path_folder_posting = Controller.get_peth_posting() + '/' + "WithoutStemming/TempPostings"
+        path_folder_abc_posting = Controller.get_peth_posting() + '/' + "WithoutStemming/ABC_Posting"
     return path_folder_posting,path_folder_abc_posting,stemming_mode
     print("init")
 
 
 def create_temp_posting_packet(stemming_mode,posting_id,terms_packet):
     path_folder_posting , path_folder_abc_posting ,stemming_mode= init_path(stemming_mode)
+    print(path_folder_posting)
+    print(path_folder_abc_posting)
+    print(stemming_mode)
     print("posting_id: " + str(posting_id))
     save_temp_posting_on_disk(posting_id,terms_packet,path_folder_posting)
     print("final write packet")

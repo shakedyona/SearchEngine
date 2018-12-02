@@ -92,12 +92,16 @@ class StartWindow(QWidget):
     def start(self):
         if self.path_to_save != '':
             print(self.path_document)
-            print(self.path_to_save) #####################################################################save
-            print(self.Checked) ####################################### stemming
+            print(self.path_to_save)
+            print(self.Checked)
+            if self.Checked:
+                stem = "yes"
+            else:
+                stem= "no"
             path_corpus = self.path_document.replace('\\','/')
             path_save = self.path_to_save.replace('\\', '/')
             print(path_corpus)
-            result = Controller.init_path(path_corpus,path_save)
+            result = Controller.init_path(path_corpus,path_save,stem)
             doc = result[0]
             term_not_stemming = result[1]
             term_stemming = result[2]
@@ -135,25 +139,27 @@ class StartWindow(QWidget):
         self.show()
 
     def Reset(self):
-        ##############################################reset
         print("Reset")
+        Controller.reset()
 
     # save posting in user path
     def LoadDictionery(self):
         if self.path_to_save != '':
-            print(self.path_to_save)  #################################path to save dictionary
-            Controller.load_dictionary()
+            dictionary = Controller.load_dictionary(self.Checked)
 
         else:
             QMessageBox.warning(self, "Something wrong", "No path entered or incorrect path entered")
 
     # save posting in user path
     def DisplayDictionary(self): ##########################################dictionary
-        if self.path_document == '':
-            QMessageBox.warning(self, "Something wrong", "No path entered or incorrect path entered")
-        else:
+        if self.path_document != '':
+            result = Controller.get_cach_dictionary()
+            print(result)
             self.SW = SecondWindow()
             self.SW.show()
+        else:
+            QMessageBox.warning(self, "Something wrong", "No path entered or incorrect path entered")
+
 
 class App(QWidget):
 

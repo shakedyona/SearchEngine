@@ -96,11 +96,8 @@ terms_previously_read = {} # [parse_term] = stemming_term
 terms_previously_read_without_stemming = {} # [term] = freq only needed stemming
 stemmer = EnglishStemmer()
 
-def stemming(parse_terms_doc):
+def stemming(parse_terms_doc,stemming_mode):
     result_stamming = {} # [stemming_term] = freq
-    config = configparser.ConfigParser()
-    config.read('ViewConfig.ini')
-    stemming_mode = str(config['Controller']['stemming'])
     if stemming_mode == 'yes':
         for term,arr in parse_terms_doc.items():
             freq = arr[0]

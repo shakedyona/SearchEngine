@@ -20,11 +20,14 @@ cach_dictionary = {} # [term] = tf
 start_time = 0
 dir_path_corpus=""
 dir_path_save=""
+stemming_mode = "yes"
 
-def init_path(path_corpus,path_save):
+
+def init_path(path_corpus,path_save,stem):
     print("init_path")
     global dir_path_corpus
     global dir_path_save
+    global stemming_mode
     dir_path_save = path_save
     print(dir_path_save)
     dir_path_corpus = path_corpus
@@ -33,7 +36,7 @@ def init_path(path_corpus,path_save):
     config = configparser.ConfigParser()
     config.read('ViewConfig.ini')
     percentage_of_division = float(config['Controller']['percentage_of_division'])
-    stemming_mode = str(config['Controller']['stemming'])
+    stemming_mode = stem
     print(stemming_mode)
     print("stemming mode: " + stemming_mode)
     return start_search_engine(stemming_mode,dir_path,percentage_of_division)
@@ -74,12 +77,12 @@ def start_search_engine(stemming_mode,dir_path,percentage_of_division):
     elif stemming_mode == 'no':
         sum_numbers = Indexer.merge_all_posting(stemming_mode,posting_id, len(all_document), the_final_terms_dictionary_without_stemming,cach_dictionary)
 
-    save_dictionary()
-    cach_dictionary.clear()
+    save_dictionary(stemming_mode)
     #create_all_city(string_city)
     #create_posting_city()
-    return get_answers_start()
     #get_answers(sum_numbers)
+    #cach_dictionary.clear()
+    return get_answers_start()
     #reset()
 
 
@@ -92,7 +95,7 @@ def parse_and_stemming_and_update(stemming_mode,read_file_packet,terms_packet,st
         for city in value[3]:
             doc_city.append([city[0].upper(),city[1]])
         parse_terms_doc = Parse.parse_text(value[2])
-        stemm_term_doc = Stemmer.stemming(parse_terms_doc)
+        stemm_term_doc = Stemmer.stemming(parse_terms_doc,stemming_mode)
         doc_id = value[1]
         doc_file_is = value[0]
         if len(value[3])>1:
@@ -206,10 +209,13 @@ def get_unique_words():
     return len(cach_dictionary)
 
 
-def save_dictionary():
+def save_dictionary(stemming_mode):
     print("cach_dictionary")
-    folder_name = r"C:\Users\shake\PycharmProjects\SearchEngineIR\Model\Indexer\json"
-    file_path = folder_name + "/" + 'dictionary.json'
+    folder_name = dir_path_save + '/' + "json"
+    if stemming_mode == "yes":
+        file_path = folder_name + "/" + 'dictionary_stemming.json'
+    else:
+        file_path = folder_name + "/" + 'dictionary_without_stemming.json'
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
 
@@ -217,31 +223,22 @@ def save_dictionary():
         json.dump(cach_dictionary, fp)
 
 
-def load_dictionary():
-    result = ""
+def load_dictionary(stemming):
     print("load_dictionary")
-    print(dir_path_save)
-    temp_path = r"C:\Users\shake\PycharmProjects\SearchEngineIR\Model\Indexer\Stemming\ABC_Posting" ####
-    folder = temp_path + "/*"
-    for file in glob.glob(folder):
-        print(file)
-        try:
-            curr_file = open(file, "r")
+    if stemming:
+        stemming_mode = "yes"
+    else:
+        stemming_mode = "no"
+    folder_name = dir_path_save + '/' + "json"
+    if stemming_mode == "yes":
+        file_path = folder_name + "/" + 'dictionary_stemming.json'
+    else:
+        file_path = folder_name + "/" + 'dictionary_without_stemming.json'
 
-        except IOError:
-            return "fail"
-        all_file = json.load(curr_file)
-        curr_file.close()
-        print(all_file)
-        # all_file = all_file.split("\n")
-        # for line in all_file:
-        #     line_split = line.split("-->")
-        #     term = line_split[0]
-        #     split_freq = line_split[1].split("[")
-        #     freq = split_freq[0]
-        #     result = result + term + "-->"+ freq + "\n"
-        #     print(result)
-
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as openfile:
+            result = json.load(openfile)
+    return result
 
 
 def get_answers_start():
@@ -257,7 +254,6 @@ def get_answers_start():
     result.append(str("{:.2f}".format(total_time / 60)))
     result.append(str("{:.2f}".format(total_time)))
     return result
-
 
 
 def get_answers(sum_numbers):
@@ -294,6 +290,9 @@ def get_answers(sum_numbers):
 
 def get_peth_corpus():
     return dir_path_corpus
+
+def get_peth_posting():
+    return dir_path_save
 
 
 def reset():
