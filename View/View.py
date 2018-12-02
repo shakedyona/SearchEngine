@@ -94,9 +94,10 @@ class StartWindow(QWidget):
             print(self.path_document)
             print(self.path_to_save) #####################################################################save
             print(self.Checked) ####################################### stemming
-            path = self.path_document.replace('\\','/')
-            print(path)
-            result = Controller.init_path(path)
+            path_corpus = self.path_document.replace('\\','/')
+            path_save = self.path_to_save.replace('\\', '/')
+            print(path_corpus)
+            result = Controller.init_path(path_corpus,path_save)
             doc = result[0]
             term_not_stemming = result[1]
             term_stemming = result[2]
@@ -140,9 +141,11 @@ class StartWindow(QWidget):
     # save posting in user path
     def LoadDictionery(self):
         if self.path_to_save != '':
-            QMessageBox.warning(self, "Something wrong", "No path entered or incorrect path entered")
+            print(self.path_to_save)  #################################path to save dictionary
+            Controller.load_dictionary()
+
         else:
-            print(self.path_to_save) #################################path to save dictionary
+            QMessageBox.warning(self, "Something wrong", "No path entered or incorrect path entered")
 
     # save posting in user path
     def DisplayDictionary(self): ##########################################dictionary

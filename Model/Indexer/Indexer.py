@@ -143,8 +143,7 @@ def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_te
     ## out while
     close_all_files(all_final_posting_path)
     Stemmer.reset()
-    #print("cach_dictionary")
-    #print(cach_dictionary)
+    reset_temp_posting()
     return sum_numbers
 
 
@@ -271,20 +270,25 @@ def handling_capitalization(term):
         lowercase_term = term.lower()
 
 
-
-
-def reset():
-    print("reset - indexer")
+def reset_posting():
+    print("reset_posting - indexer")
     path_folder_posting, path_folder_abc_posting,stemming_mode = init_path("yes")
-
-    for file in glob.glob(path_folder_posting+ "/*"):
-            os.remove(file)
     for file in glob.glob(path_folder_abc_posting+ "/*"):
+            os.remove(file)
+
+    path_folder_posting, path_folder_abc_posting,stemming_mode = init_path("no")
+    for file in glob.glob(path_folder_abc_posting+ "/*"):
+            os.remove(file)
+
+
+def reset_temp_posting():
+    print("reset_temp_posting - indexer")
+    path_folder_posting, path_folder_abc_posting,stemming_mode = init_path("yes")
+    for file in glob.glob(path_folder_posting+ "/*"):
             os.remove(file)
 
     path_folder_posting, path_folder_abc_posting,stemming_mode = init_path("no")
     for file in glob.glob(path_folder_posting+ "/*"):
             os.remove(file)
-    for file in glob.glob(path_folder_abc_posting+ "/*"):
-            os.remove(file)
+
 

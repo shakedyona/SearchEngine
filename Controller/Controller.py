@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 import time
@@ -18,12 +19,16 @@ all_city = {} # [city] = (country_name,coin,population_size,number_of_file)
 cach_dictionary = {} # [term] = tf
 start_time = 0
 dir_path_corpus=""
+dir_path_save=""
 
-def init_path(path):
+def init_path(path_corpus,path_save):
     print("init_path")
     global dir_path_corpus
-    dir_path_corpus = path
-    dir_path = path+'/'+"Temp_corpus"
+    global dir_path_save
+    dir_path_save = path_save
+    print(dir_path_save)
+    dir_path_corpus = path_corpus
+    dir_path = path_corpus+'/'+"Temp_corpus"
     print(dir_path)
     config = configparser.ConfigParser()
     config.read('ViewConfig.ini')
@@ -69,8 +74,10 @@ def start_search_engine(stemming_mode,dir_path,percentage_of_division):
     elif stemming_mode == 'no':
         sum_numbers = Indexer.merge_all_posting(stemming_mode,posting_id, len(all_document), the_final_terms_dictionary_without_stemming,cach_dictionary)
 
-    create_all_city(string_city)
-    create_posting_city()
+    save_dictionary()
+    cach_dictionary.clear()
+    #create_all_city(string_city)
+    #create_posting_city()
     return get_answers_start()
     #get_answers(sum_numbers)
     #reset()
@@ -198,6 +205,45 @@ def get_number_documents_indexed():
 def get_unique_words():
     return len(cach_dictionary)
 
+
+def save_dictionary():
+    print("cach_dictionary")
+    folder_name = r"C:\Users\shake\PycharmProjects\SearchEngineIR\Model\Indexer\json"
+    file_path = folder_name + "/" + 'dictionary.json'
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+
+    with open(file_path, 'w') as fp:
+        json.dump(cach_dictionary, fp)
+
+
+def load_dictionary():
+    result = ""
+    print("load_dictionary")
+    print(dir_path_save)
+    temp_path = r"C:\Users\shake\PycharmProjects\SearchEngineIR\Model\Indexer\Stemming\ABC_Posting" ####
+    folder = temp_path + "/*"
+    for file in glob.glob(folder):
+        print(file)
+        try:
+            curr_file = open(file, "r")
+
+        except IOError:
+            return "fail"
+        all_file = json.load(curr_file)
+        curr_file.close()
+        print(all_file)
+        # all_file = all_file.split("\n")
+        # for line in all_file:
+        #     line_split = line.split("-->")
+        #     term = line_split[0]
+        #     split_freq = line_split[1].split("[")
+        #     freq = split_freq[0]
+        #     result = result + term + "-->"+ freq + "\n"
+        #     print(result)
+
+
+
 def get_answers_start():
     end_time = time.time()
     total_time = end_time - start_time
@@ -256,7 +302,8 @@ def reset():
     the_final_terms_dictionary_without_stemming.clear()
     all_document.clear()
     all_city.clear()
-    Indexer.reset()
+    Indexer.reset_posting()
+    Indexer.reset_temp_posting()
     Stemmer.reset()
     ReadFile.reset()
 

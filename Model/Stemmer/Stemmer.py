@@ -105,12 +105,12 @@ def stemming(parse_terms_doc):
         for term,arr in parse_terms_doc.items():
             freq = arr[0]
             stemm_bool =arr[1]
-            if term=="Thank": ###########################################################
-                print(stemm_bool)
-                print("Thank")
-            if term=="The": ###########################################################
-                print(stemm_bool)
-                print("The")
+            # if term=="Thank": ###########################################################
+            #     print(stemm_bool)
+            #     print("Thank")
+            # if term=="The": ###########################################################
+            #     print(stemm_bool)
+            #     print("The")
             if term[0].isupper():
                 term = term.upper()
             if stemm_bool:
