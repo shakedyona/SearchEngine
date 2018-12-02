@@ -1,5 +1,8 @@
 
 import configparser
+
+from Controller import Controller
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 date_characters = {'st', 'nd', 'rd', 'th'}
@@ -37,9 +40,7 @@ def clean_numeric(token):
 
 
 def set_stop_words_file():
-    config = configparser.ConfigParser()
-    config.read('ViewConfig.ini')
-    path = str(config['Parse']['stop_words_path'])
+    path =  Controller.get_peth_corpus() +'/'+"stop_words.txt"
     global stop_words
     with open(path) as note:
         stop_words = set(word.strip() for word in note)
@@ -60,15 +61,11 @@ def remove_other_characters(token):
 
 # insert token to dic terms and amount in the text
 def insert_to_dictionary_terms(dictionary_terms_all_text, token, stem_mode):
-    if(token=="Thank"):
-        print("parser - Thank")
-    #print("insert_to_dictionary_terms:  " + token)
     stem = True
     if stem_mode == 0:
         stem = False
     else:
         stem = True
-
     if token != '':
         if token in dictionary_terms_all_text:
             dictionary_terms_all_text[token][0] += 1
@@ -819,8 +816,7 @@ def parse_text(text):
                                     token = tok + '.' + division
                                     insert_to_dictionary_terms(dictionary_terms_all_text, token + " M Dollars", 0)
                                     index_text += 1
-                    else:  # 45."jk -> 45.
-                        insert_to_dictionary_terms(dictionary_terms_all_text, token, 0)
+
             # case : the first character is upper case
             elif token[0].isupper():
                 stem_mode = 0
@@ -838,14 +834,19 @@ def parse_text(text):
                     insert_to_dictionary_terms(dictionary_terms_all_text, token, stem_mode)
             # case : regular token
             else:
-                stem_mode = 1
-                # stop word
-                flag_stop_words = True
-                if token in stop_words:
-                    flag_stop_words = False
-                if flag_stop_words:
-                    token = remove_other_characters(token)
-                    insert_to_dictionary_terms(dictionary_terms_all_text, token, stem_mode)
+                regular_token = True
+                for i in token:
+                    if i in functional_characters or i == '%':
+                        regular_token = False
+                if regular_token:
+                    stem_mode = 1
+                    # stop word
+                    flag_stop_words = True
+                    if token in stop_words:
+                        flag_stop_words = False
+                    if flag_stop_words:
+                        token = remove_other_characters(token)
+                        insert_to_dictionary_terms(dictionary_terms_all_text, token, stem_mode)
 
         # jump to next token
         index_text += 1

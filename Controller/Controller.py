@@ -16,15 +16,23 @@ the_final_terms_dictionary_without_stemming = {} # [term] = (df,idf,sum_tf, the_
 all_document = {} # [doc_id] = (file_id , doc_maxtf , length ,doc_city,unique_words)
 all_city = {} # [city] = (country_name,coin,population_size,number_of_file)
 cach_dictionary = {} # [term] = tf
+start_time = 0
+dir_path_corpus=""
 
-def init_path():
+def init_path(path):
+    print("init_path")
+    global dir_path_corpus
+    dir_path_corpus = path
+    dir_path = path+'/'+"Temp_corpus"
+    print(dir_path)
     config = configparser.ConfigParser()
     config.read('ViewConfig.ini')
-    dir_path = str(config['Controller']['corpus_path'])
     percentage_of_division = float(config['Controller']['percentage_of_division'])
     stemming_mode = str(config['Controller']['stemming'])
+    print(stemming_mode)
     print("stemming mode: " + stemming_mode)
-    start_search_engine(stemming_mode,dir_path,percentage_of_division)
+    return start_search_engine(stemming_mode,dir_path,percentage_of_division)
+
 
 def start_search_engine(stemming_mode,dir_path,percentage_of_division):
     print("start_search_engine")
@@ -34,6 +42,7 @@ def start_search_engine(stemming_mode,dir_path,percentage_of_division):
     number_files_in_packet = round((the_total_number_of_files*percentage_of_division)+0.5)
 
     posting_id = 0
+    global start_time
     start_time = time.time()
     # This loop performs for each file - saving its list of file names. And for each list, read the list in the ReadFile
     for number_of_file in range(1, the_total_number_of_files, number_files_in_packet):
@@ -62,11 +71,8 @@ def start_search_engine(stemming_mode,dir_path,percentage_of_division):
 
     create_all_city(string_city)
     create_posting_city()
+    return get_answers_start()
     #get_answers(sum_numbers)
-    end_time = time.time()
-    total_time = end_time - start_time
-    print("Time: " + str("{:.2f}".format(total_time / 60)) + " minutes")
-    print("Time: " + str("{:.2f}".format(total_time)) + " seconds")
     #reset()
 
 
@@ -192,6 +198,21 @@ def get_number_documents_indexed():
 def get_unique_words():
     return len(cach_dictionary)
 
+def get_answers_start():
+    end_time = time.time()
+    total_time = end_time - start_time
+    print("Time: " + str("{:.2f}".format(total_time / 60)) + " minutes")
+    print("Time: " + str("{:.2f}".format(total_time)) + " seconds")
+
+    result = []
+    result.append(str(len(all_document)))
+    result.append(str(len(the_final_terms_dictionary_without_stemming)))
+    result.append(str(len(the_final_terms_dictionary)))
+    result.append(str("{:.2f}".format(total_time / 60)))
+    result.append(str("{:.2f}".format(total_time)))
+    return result
+
+
 
 def get_answers(sum_numbers):
     print("get_answers")
@@ -223,6 +244,10 @@ def get_answers(sum_numbers):
     print("10 The least common terms in the database: "+ str(min_10))
     # my
     print("number_of_documents: " + str(len(all_document)))
+
+
+def get_peth_corpus():
+    return dir_path_corpus
 
 
 def reset():
