@@ -78,10 +78,10 @@ def start_search_engine(stemming_mode,dir_path,percentage_of_division):
         sum_numbers = Indexer.merge_all_posting(stemming_mode,posting_id, len(all_document), the_final_terms_dictionary_without_stemming,cach_dictionary)
 
     save_dictionary(stemming_mode)
-    #create_all_city(string_city)
-    #create_posting_city()
+    create_all_city(string_city)
+    create_posting_city()
     #get_answers(sum_numbers)
-    #cach_dictionary.clear()
+    cach_dictionary.clear()
     return get_answers_start()
     #reset()
 
@@ -210,35 +210,45 @@ def get_unique_words():
 
 
 def save_dictionary(stemming_mode):
-    print("cach_dictionary")
+    print("save_dictionary")
     folder_name = dir_path_save + '/' + "json"
     if stemming_mode == "yes":
         file_path = folder_name + "/" + 'dictionary_stemming.json'
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+
+        with open(file_path, 'w') as file:
+            json.dump(the_final_terms_dictionary, file)
     else:
         file_path = folder_name + "/" + 'dictionary_without_stemming.json'
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
 
-    with open(file_path, 'w') as fp:
-        json.dump(cach_dictionary, fp)
+        with open(file_path, 'w') as file:
+            json.dump(the_final_terms_dictionary_without_stemming, file)
 
 
-def load_dictionary(stemming):
+def load_dictionary(stemming,path_folder_save):
+    global the_final_terms_dictionary
+    global the_final_terms_dictionary_without_stemming
     print("load_dictionary")
     if stemming:
         stemming_mode = "yes"
     else:
         stemming_mode = "no"
-    folder_name = dir_path_save + '/' + "json"
+    folder_name = path_folder_save + '/' + "json"
     if stemming_mode == "yes":
         file_path = folder_name + "/" + 'dictionary_stemming.json'
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as openfile:
+                the_final_terms_dictionary = json.load(openfile)
     else:
         file_path = folder_name + "/" + 'dictionary_without_stemming.json'
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as openfile:
+                the_final_terms_dictionary_without_stemming = json.load(openfile)
 
-    if os.path.exists(file_path):
-        with open(file_path, 'r') as openfile:
-            result = json.load(openfile)
-    return result
+    #create_inpute_zip_law() ##############################################################
 
 
 def get_answers_start():
@@ -287,6 +297,35 @@ def get_answers(sum_numbers):
     # my
     print("number_of_documents: " + str(len(all_document)))
 
+def create_inpute_zip_law():
+    print("create_inpute_zip_low")
+    file_zip_stemming = r"C:\Users\shake\PycharmProjects\SearchEngineIR\Model\Indexer\file_zip_stemming.txt"
+    file_zip_without_stemming = r"C:\Users\shake\PycharmProjects\SearchEngineIR\Model\Indexer\file_zip_without_stemming.txt"
+    try:
+        zip_file_stemm = open(file_zip_stemming, "w")
+
+    except IOError:
+        return "fail"
+
+    with zip_file_stemm:
+        for term, value in the_final_terms_dictionary.items():
+            zip_file_stemm.write(term + ";" + str(value[2])+'\n')
+
+        zip_file_stemm.close()
+
+    try:
+        zip_file = open(file_zip_without_stemming, "w")
+
+    except IOError:
+        return "fail"
+
+    with zip_file:
+        for term, value in the_final_terms_dictionary_without_stemming.items():
+            zip_file.write(term + ";" + str(value[2])+'\n')
+
+        zip_file.close()
+
+    print("final create_inpute_zip_low")
 
 def get_peth_corpus():
     return dir_path_corpus

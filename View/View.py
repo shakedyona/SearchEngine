@@ -139,13 +139,18 @@ class StartWindow(QWidget):
         self.show()
 
     def Reset(self):
-        print("Reset")
-        Controller.reset()
+        if self.path_to_save != '':
+            print("Reset")
+            Controller.reset()
+        else:
+            QMessageBox.warning(self, "Something wrong", "No path entered or incorrect path entered")
+
+
 
     # save posting in user path
     def LoadDictionery(self):
         if self.path_to_save != '':
-            dictionary = Controller.load_dictionary(self.Checked)
+            Controller.load_dictionary(self.Checked,self.path_to_save)
 
         else:
             QMessageBox.warning(self, "Something wrong", "No path entered or incorrect path entered")
