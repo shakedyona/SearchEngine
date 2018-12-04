@@ -21,6 +21,7 @@ start_time = 0
 dir_path_corpus=""
 dir_path_save=""
 stemming_mode = "yes"
+max_doc_city = {} # [city] -->  (sum_tf,sort_list_doc)
 
 
 def init_path(path_corpus,path_save,stem):
@@ -31,7 +32,7 @@ def init_path(path_corpus,path_save,stem):
     dir_path_save = path_save
     print(dir_path_save)
     dir_path_corpus = path_corpus
-    dir_path = path_corpus+'/'+"Temp_corpus"
+    dir_path = path_corpus+'/'+"corpus"
     print(dir_path)
     config = configparser.ConfigParser()
     config.read('ViewConfig.ini')
@@ -71,17 +72,17 @@ def start_search_engine(stemming_mode,dir_path,percentage_of_division):
         Indexer.create_temp_posting_packet(stemming_mode,posting_id,terms_packet)
 
     # Outside the loop
+    create_all_city(string_city)
     # merge all posting
     if stemming_mode=='yes':
-        sum_numbers = Indexer.merge_all_posting(stemming_mode,posting_id,len(all_document),the_final_terms_dictionary,cach_dictionary)
+        sum_numbers = Indexer.merge_all_posting(stemming_mode,posting_id,len(all_document),the_final_terms_dictionary,cach_dictionary,all_city,max_doc_city)
     elif stemming_mode == 'no':
-        sum_numbers = Indexer.merge_all_posting(stemming_mode,posting_id, len(all_document), the_final_terms_dictionary_without_stemming,cach_dictionary)
+        sum_numbers = Indexer.merge_all_posting(stemming_mode,posting_id, len(all_document), the_final_terms_dictionary_without_stemming,cach_dictionary,all_city,max_doc_city)
 
     save_dictionary(stemming_mode)
-    create_all_city(string_city)
     create_posting_city()
-    #get_answers(sum_numbers)
-    cach_dictionary.clear()
+    get_answers(sum_numbers)
+    #cach_dictionary.clear()
     return get_answers_start()
     #reset()
 
@@ -91,12 +92,26 @@ def parse_and_stemming_and_update(stemming_mode,read_file_packet,terms_packet,st
     for id , value in read_file_packet.items():
         doc_len = 0
         doc_maxtf = 0
+        doc_id = value[1]
         doc_city = []
         for city in value[3]:
-            doc_city.append([city[0].upper(),city[1]])
+            doc_city.append(city.upper())
+
+        if doc_city:
+            for curr_city in doc_city:
+                if curr_city[0] == "(" and curr_city[len(curr_city)-1] == ")":
+                    curr_city = curr_city[1:len(curr_city)-2]
+                if curr_city in string_city:
+                    string_city[curr_city] = string_city[curr_city] + "|" + doc_id
+
+                if curr_city not in string_city and "<" not in curr_city:
+                    string_city[curr_city] = doc_id
+
+
+
         parse_terms_doc = Parse.parse_text(value[2])
         stemm_term_doc = Stemmer.stemming(parse_terms_doc,stemming_mode)
-        doc_id = value[1]
+
         doc_file_is = value[0]
         if len(value[3])>1:
             print("more then 1 city")
@@ -104,42 +119,28 @@ def parse_and_stemming_and_update(stemming_mode,read_file_packet,terms_packet,st
             print(doc_id)
         unique_words = len(stemm_term_doc)
         # key = the , value = 11
-        for term, freq in stemm_term_doc.items():
+        for term, details in stemm_term_doc.items():
+            freq = details[0]
+            position = details[1]
             if doc_maxtf < freq:
                 doc_maxtf = freq
             doc_len = doc_len+freq
 
             if term in terms_packet:
-                terms_packet[term][doc_id] = freq
+                terms_packet[term][doc_id] = [freq,position]
             else:
                 terms_packet[term] = {}
-                terms_packet[term][doc_id] = freq
+                terms_packet[term][doc_id] = [freq,position]
         all_document[doc_id] = [doc_file_is, doc_maxtf, doc_len , doc_city,unique_words]
 
 
-        if doc_city:
-            for city in doc_city:
-                curr_city = city[0]
-                curr_position = city[1]
 
-                if curr_city[0] == "(" and curr_city[len(curr_city)-1] == ")":
-                    curr_city = curr_city[1:len(curr_city)-2]
-                if curr_city in string_city:
-                    string_city[curr_city][0] = string_city[curr_city][0]+1
-                    details =  string_city[curr_city][1] + "|" +"("+doc_id+","+str(curr_position)+")"
-                    string_city[curr_city][1] = details
-
-
-                if curr_city not in string_city and "<" not in curr_city:
-                    details ="("+doc_id+","+str(curr_position)+")"
-                    string_city[curr_city] = [1,details]
 
 
 def create_all_city(string_city):
     print("create_all_city")
     for city,val in string_city.items():
-        number_of_file = val[0]
-        all_doc = val[1]
+        all_doc = val
         flag = True
         try:
             country_list = rapi.get_countries_by_capital(city)
@@ -165,15 +166,36 @@ def create_all_city(string_city):
             try:
                 #population_size = str("%.2f" % (float(obj[u'geobytespopulation']) / 100))
                 population_size = int(obj[u'geobytespopulation'])
+                token = str(population_size)
+                token_len = len(token)
+                if token_len < 4:
+                    new_token = token
+                elif token_len < 7:  # 87,999.00
+                    start = token[:-3]  # 87
+                    div = token[:-1]  # 8799
+                    div = div[-2:]  # 99
+                    new_token = start + "." + div + "K"
+                elif token_len < 10:  # 100,230,000.00
+                    start = token[:-6]  # 100
+                    div = token[:-4]  # 10023
+                    div = div[-2:]  # 23
+                    new_token = start + "." + div + "M"
+                else:  # 105,230,000,000.00
+                    start = token[:-9]  # 105
+                    div = token[:-7]  # 230
+                    div = div[-2:]  # 23
+                    new_token = start + "." + div + "B"
+                population_size = str(new_token)
+
             except ValueError:
                 flag = False
             capital = str(obj[u'geobytescapital'])
 
         if flag:
             if city==capital:
-                all_city[city] = [country_name, coin, population_size, capital, number_of_file,all_doc,0]
+                all_city[city] = [country_name, coin, population_size, capital,all_doc,0]
             else:
-                all_city[city] = [country_name, coin, population_size, capital, number_of_file,all_doc,1]
+                all_city[city] = [country_name, coin, population_size, capital,all_doc,1]
 
 def create_posting_city():
     print("create_posting_city")
@@ -248,7 +270,7 @@ def load_dictionary(stemming,path_folder_save):
             with open(file_path, 'r') as openfile:
                 the_final_terms_dictionary_without_stemming = json.load(openfile)
 
-    #create_inpute_zip_law() ##############################################################
+    create_inpute_zip_law() ##############################################################
 
 
 def get_answers_start():
@@ -282,12 +304,27 @@ def get_answers(sum_numbers):
     # 5
     number_cities = len(all_city)
     print("Number of different cities: " + str(number_cities))
-    dic_count = Counter(tok[6] for tok in all_city.values())
+    dic_count = Counter(tok[5] for tok in all_city.values())
     list_of_capital = dict(dic_count.items())
     number_not_capital_city = list_of_capital[1]
     print("Number of cities that are not capital cities: " + str(number_not_capital_city))
     # 6
-
+    city_max = ""
+    freq_max = 0
+    doc_max = ""
+    doc_position_max = ""
+    for city, value in max_doc_city.items():
+        list_details = value[1]
+        for i in list_details:
+            freq = i[1][0]
+            doc = i[0]
+            position = i[1][1]
+            if freq > freq_max:
+                freq_max = freq
+                doc_max = doc
+                city_max = city
+                doc_position_max = position
+    print("Name the document with the most shows of a single city: \n" + "city: " +str(city_max) + " number of shows: " + str(freq_max) + " document: " + str(doc_max) + " poisition in document: "+ str(doc_position_max))
     # 7
     t = sorted(cach_dictionary, key=cach_dictionary.get, reverse=True)
     min_10 = t[len(cach_dictionary) - 10:]
@@ -296,6 +333,7 @@ def get_answers(sum_numbers):
     print("10 The least common terms in the database: "+ str(min_10))
     # my
     print("number_of_documents: " + str(len(all_document)))
+
 
 def create_inpute_zip_law():
     print("create_inpute_zip_low")

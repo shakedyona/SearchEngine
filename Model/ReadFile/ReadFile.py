@@ -69,8 +69,8 @@ def read_file(file_path, the_all_doc_in_all_folders):
                 for city in part_doc_city:
                     city = city.split()
                     city = city[0]
-                    position = all_doc.find(city)
-                    doc_city.append([city,position])
+                    #position = all_doc.find(city)
+                    doc_city.append(city)
             single_document = [file_id, doc_id, doc_text, doc_city]
             the_all_doc_in_all_folders[doc_id] = single_document
             i = i + 1

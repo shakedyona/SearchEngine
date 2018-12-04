@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (QPushButton, QLineEdit, QLabel, QCheckBox, QComboBo
 from PyQt5.QtCore import pyqtSlot
 from PyQt5 import QtCore
 import sys
+import subprocess as sp
 
 from Controller import Controller
 
@@ -156,15 +157,25 @@ class StartWindow(QWidget):
             QMessageBox.warning(self, "Something wrong", "No path entered or incorrect path entered")
 
     # save posting in user path
-    def DisplayDictionary(self): ##########################################dictionary
-        if self.path_document != '':
-            result = Controller.get_cach_dictionary()
-            print(result)
-            self.SW = SecondWindow()
-            self.SW.show()
+    def DisplayDictionary(self):
+        cach_dictionary = Controller.get_cach_dictionary()
+        if self.path_to_save != '':
+            try:
+                zip_file_dic = open(self.path_to_save + "/dictionary_freq.txt", "w")
+
+            except IOError:
+                return "fail"
+
+            for term, freq in cach_dictionary.items():
+                zip_file_dic.write(term + "-->" + str(freq) + '\n')
+            zip_file_dic.close()
+            print("finish")
+            fileName = self.path_to_save + "/dictionary_freq.txt"
+            programName = "notepad.exe"
+            sp.Popen([programName, fileName])
+            # os.remove(fileName)
         else:
             QMessageBox.warning(self, "Something wrong", "No path entered or incorrect path entered")
-
 
 class App(QWidget):
 

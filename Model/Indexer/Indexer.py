@@ -54,18 +54,21 @@ def save_temp_posting_on_disk(posting_id,terms_packet,path_folder_posting):
             temp_terms_value = value.items()
             sort_value = list(reversed(sorted(temp_terms_value, key=lambda freq: freq[1])))
             for doc,freq in sort_value:
-                total_freq = total_freq + freq
+                freq_str = str(freq)
+                freq_str = freq_str.replace("'",'"')
+                total_freq = total_freq + freq[0]
                 if len(doc_freq_str) > 1:
-                    doc_freq_str = doc_freq_str + r',"' + str(doc) + r'":' + str(freq)
+                    doc_freq_str = doc_freq_str + r',"' + str(doc) + r'":' + str(freq_str)
                 else:
-                    doc_freq_str = doc_freq_str + r'"' + str(doc) + r'":' + str(freq)
+                    doc_freq_str = doc_freq_str + r'"' + str(doc) + r'":' + str(freq_str)
+                    
             posting_file.write(term + "-->" + str(total_freq) + "(#){" + doc_freq_str + "}" + '\n')
 
         posting_file.close()
 
 
 # terms_packet = { t1 : { (d1, 2), (d3, 1), (d4, 2) }, t2 : { (d1, 2), (d3, 1), (d4, 2) }}
-def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_terms_dictionary,cach_dictionary):
+def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_terms_dictionary,cach_dictionary,all_city,max_doc_city):
     #check_uppercase()
     path_folder_posting, path_folder_abc_posting,stemming_mode = init_path(stemming_mode)
     print("merge_all_posting")
@@ -125,18 +128,18 @@ def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_te
             else:
                 cach_dictionary[min_term] = sum_tf
                 #print("final posting: " + min_term)
-                calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary)
+                calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary,all_city,max_doc_city)
         else:
             if min_term in terms_to_updated: # parti #the
                 sum_tf = sum_tf + terms_to_updated[min_term][0]
                 cach_dictionary[min_term] = sum_tf
                 list_doc.update(terms_to_updated[min_term][1])
                 #print("final posting: " + min_term)
-                calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary)
+                calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary,all_city,max_doc_city)
             else:
                 #print("final posting: " + min_term)
                 cach_dictionary[min_term] = sum_tf
-                calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary)
+                calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary,all_city,max_doc_city)
 
         for i in all_posting_file_with_equal_term:
             find_first_line(the_open_posting_file[i], i, term_first_line_postings,freq_sum_doc_first_line_postings, close_file)
@@ -150,7 +153,7 @@ def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_te
     return sum_numbers
 
 
-def calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary):
+def calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary,all_city,max_doc_city):
     # sumtf , df ,idf
     N = number_doc_in_corpus
     idf = log2(N / df)
@@ -160,6 +163,9 @@ def calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in
     # print(the_abc_posting_name)
     # print(sum_tf)
     # print(sort_list_doc)
+    min_term_upper = min_term.upper()
+    if min_term_upper in all_city:
+        max_doc_city[min_term_upper] = (sum_tf,sort_list_doc)
     all_final_posting_path[the_abc_posting_name].write(min_term + "-->" + str(sum_tf) + str(sort_list_doc) + '\n')
     number_of_line_in_abc_posting[the_abc_posting_name] = number_of_line_in_abc_posting[the_abc_posting_name] + 1
     the_final_terms_dictionary[min_term] = (df, idf, sum_tf, the_abc_posting_name, number_of_line_in_abc_posting[the_abc_posting_name])
