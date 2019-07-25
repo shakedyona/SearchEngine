@@ -4,21 +4,18 @@ from nltk.stem.snowball import EnglishStemmer
 
 terms_previously_read = {} # [parse_term] = stemming_term
 terms_previously_read_without_stemming = {} # [term] = freq only needed stemming
+dic_upper_term_stemming = {} # [stemming_term] = 1
 stemmer = EnglishStemmer()
 
 def stemming(parse_terms_doc,stemming_mode):
+
+    #parse_terms_doc = {'POLITICIANS': [1, False, '0'], 'PARTY': [1, False, '1'],'mar': [1, True, '0'], 'Mar': [1, False, '0'], 'MAR': [1, False, '0'], '10.00': [1, False, '609'], 'birth': [1, True, '479'],'Policies': [1, False, '479'],'Polici': [1, False, '479'],'polici': [1, True, '479']}
     result_stamming = {} # [stemming_term] = freq
     if stemming_mode == 'yes':
         for term,arr in parse_terms_doc.items():
             freq = arr[0]
             stemm_bool =arr[1]
             position = arr[2]
-            # if term=="Thank": ###########################################################
-            #     print(stemm_bool)
-            #     print("Thank")
-            # if term=="The": ###########################################################
-            #     print(stemm_bool)
-            #     print("The")
             if term[0].isupper():
                 term = term.upper()
             if stemm_bool:
@@ -30,6 +27,8 @@ def stemming(parse_terms_doc,stemming_mode):
                         result_stamming[stemming_word] = (curr_freq + freq, str(curr_position) + "|" + str(position))
                     else:
                         result_stamming[stemming_word] = (freq,position)
+
+                    dic_upper_term_stemming[stemming_word] = 1
 
                 else:
                     term_splite = term.split(" ")
@@ -51,6 +50,8 @@ def stemming(parse_terms_doc,stemming_mode):
 
                     terms_previously_read[term] = new_stem
 
+                    dic_upper_term_stemming[new_stem] = 1
+
                     if new_stem in result_stamming:
                         curr_freq = result_stamming[new_stem][0]
                         curr_position = result_stamming[new_stem][1]
@@ -61,6 +62,7 @@ def stemming(parse_terms_doc,stemming_mode):
                 #print(term)
                 if term[0].isupper():
                     term = term.upper()
+
                 if term in result_stamming:
                     curr_freq = result_stamming[term][0]
                     curr_position = result_stamming[term][1]
@@ -95,18 +97,23 @@ def stemming(parse_terms_doc,stemming_mode):
                 else:
                     result_stamming[term] = (freq,position)
 
-
     return result_stamming
 
 
 def get_dictionary():
     return terms_previously_read
 
+
 def get_dictionary_without_stemming():
     return terms_previously_read_without_stemming
+
+
+def get_dictionary_value():
+    return dic_upper_term_stemming
 
 
 def reset():
     print("reset - stemmer")
     terms_previously_read.clear()
     terms_previously_read_without_stemming.clear()
+    dic_upper_term_stemming.clear()

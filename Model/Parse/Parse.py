@@ -1,10 +1,10 @@
 
-import configparser
+# import configparser
 
 from Controller import Controller
 
-config = configparser.ConfigParser()
-config.read('config.ini')
+# config = configparser.ConfigParser()
+# config.read('config.ini')
 date_characters = {'st', 'nd', 'rd', 'th'}
 dictionary_Letters ={'A' ,'B' ,'C' ,'D' ,'E' ,'F' ,'G' ,'H' ,'I' ,'J' ,'K' ,'L' ,'M' ,'N' ,'O' ,'P' ,'Q' 'R' ,'S' ,'T' ,'U' ,'V' ,'W' ,'X' ,'Y' ,'Z' ,'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h','i', 'j', 'k', 'l','m','n','o','p', 'q','r','s','t','u','v','w','x','y','z'}
 dictionary_month_name_to_numbers = {'january': '01', 'jan': '01', 'february': '02', 'feb': '02', 'march': '03', 'mar': '03', 'april': '04',
@@ -25,6 +25,69 @@ dictionary_M_B_T = {"Thousand", "thousand" ,"bn", "billion", "million", "trillio
 valid_numbers = {".", ",", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
 dictionary_upper_case = {}
 # clean numeric tokens - from 68.67999999 tp 68.67
+
+
+def parse_query_narrative(text):
+    list_of_sentences = []
+    not_rel = False
+    rel = True
+    list_rel = []
+
+    # Set of words that we don't want to
+    words_dots = {'mr.', 'ms.', 'lt.', 'col.', 'minister.','etc.','i.e.'}
+    word_remove = {'Documents','discussing','following','issues','i.e.','etc.','documents', 'document', 'discuss', 'discussing',
+                                      'information', 'considered'}
+    set_of_punctuations= {'[', '(', '{', '`', ')', '<', '|', '&', '~', '+', '^', '@', '*', '?', '$', '.',
+                          '>', ';', '_', '\'', ':', ']', '/', '\\', "}", '!', '=', '#', ',', '\"', '-'}
+
+    text = text.split("-")
+    for item in text:
+        if "not relevant:" in item :
+            list_rel.append(item.replace("not relevant:",""))
+            not_rel = True
+            rel = False
+        elif "relevant:" in item:
+            rel = True
+            not_rel = False
+        else:
+            if rel:
+                list_rel.append(item)
+
+    for item in list_rel:
+        new_text = item.split()
+        sentence = ''
+        for word in new_text:
+            one_last_char = word[-1:]
+            index = 2
+
+            while one_last_char in set_of_punctuations and len(word) >= index and one_last_char is not '.':
+                one_last_char = word[-index:][0]
+                index += 1
+
+            # check if this is the end or not
+            if word.count(".") > 1 and word not in word_remove:
+                sentence += word + ' '
+
+            # check if remove from sets
+            elif one_last_char is '.' and word.lower() not in words_dots and word not in word_remove:
+                sentence += word + ' '
+                list_of_sentences.append(sentence)
+                sentence = ''
+            else:
+                if word not in word_remove:
+                    sentence += word + ' '
+
+        if not sentence == '':
+            list_of_sentences.append(sentence)
+
+    new_narrative = ''
+    for sentence in list_of_sentences:
+        if "not relevant" not in sentence:
+            new_narrative += " " + sentence
+        elif "are relevant" in sentence:
+            new_narrative += " " + sentence
+
+    return new_narrative
 
 
 def func_dictionary_upper_case():

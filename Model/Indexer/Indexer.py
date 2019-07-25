@@ -16,18 +16,35 @@ sum_numbers =0
 
 def init_path(stemming_mode):
     print("init_path - indexer")
+    folder_path_save = Controller.get_peth_posting()
+
     if stemming_mode == 'yes':
-        path_folder_posting = Controller.get_peth_posting()+'/'+"Stemming/TempPostings"
-        path_folder_abc_posting = Controller.get_peth_posting()+'/'+"Stemming/ABC_Posting"
+        path_folder_posting = folder_path_save + '/Stemming/TempPostings'
+        if not os.path.exists(path_folder_posting):
+            os.makedirs(path_folder_posting)
+        path_folder_abc_posting = folder_path_save + '/Stemming/ABC_Posting'
+        if not os.path.exists(path_folder_abc_posting):
+            os.makedirs(path_folder_abc_posting)
+
     elif stemming_mode == 'no':
-        path_folder_posting = Controller.get_peth_posting() + '/' + "WithoutStemming/TempPostings"
-        path_folder_abc_posting = Controller.get_peth_posting() + '/' + "WithoutStemming/ABC_Posting"
-    return path_folder_posting,path_folder_abc_posting,stemming_mode
+        path_folder_posting = folder_path_save + '/WithoutStemming/TempPostings'
+        if not os.path.exists(path_folder_posting):
+            os.makedirs(path_folder_posting)
+        path_folder_abc_posting = folder_path_save + '/WithoutStemming/ABC_Posting'
+        if not os.path.exists(path_folder_abc_posting):
+            os.makedirs(path_folder_abc_posting)
+
+    city_path = Controller.get_peth_posting() + '/' + "citiesPosting.txt"
+
+    print(path_folder_abc_posting)
+    print(path_folder_posting)
+    print(city_path)
+    return path_folder_posting, path_folder_abc_posting, stemming_mode, city_path
     print("init")
 
 
 def create_temp_posting_packet(stemming_mode,posting_id,terms_packet):
-    path_folder_posting , path_folder_abc_posting ,stemming_mode= init_path(stemming_mode)
+    path_folder_posting , path_folder_abc_posting ,stemming_mode,city_path = init_path(stemming_mode)
     print(path_folder_posting)
     print(path_folder_abc_posting)
     print(stemming_mode)
@@ -70,20 +87,23 @@ def save_temp_posting_on_disk(posting_id,terms_packet,path_folder_posting):
 # terms_packet = { t1 : { (d1, 2), (d3, 1), (d4, 2) }, t2 : { (d1, 2), (d3, 1), (d4, 2) }}
 def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_terms_dictionary,cach_dictionary,all_city,max_doc_city):
     #check_uppercase()
-    path_folder_posting, path_folder_abc_posting,stemming_mode = init_path(stemming_mode)
+    path_folder_posting, path_folder_abc_posting,stemming_mode,city_path= init_path(stemming_mode)
     print("merge_all_posting")
     finish = False
     number_of_line_in_abc_posting = {}
-    all_final_posting_path = create_final_posting(path_folder_abc_posting,number_of_line_in_abc_posting)
+    all_final_posting_path = create_final_posting(path_folder_abc_posting,number_of_line_in_abc_posting,city_path)
     term_first_line_postings = {}
     freq_sum_doc_first_line_postings = {}
     the_open_posting_file = {}
+    stemm_dictionary_values = []
     if stemming_mode == 'yes':
         stemm_dictionary = Stemmer.get_dictionary()# all stemming_term
+        stemm_dictionary_values = Stemmer.get_dictionary_value()
     elif stemming_mode == 'no':
         stemm_dictionary = Stemmer.get_dictionary_without_stemming()  # all stemming_term
     cach_dictionary.clear()
     terms_to_updated = {}  # The terms are in lower case letters
+
 
 
     close_file ={}
@@ -102,8 +122,6 @@ def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_te
         list_doc = {}
         sum_tf = 0
         df = 0
-        if min_term == "thank" or min_term == "THANK":
-            print("loko")
         for index, term in term_first_line_postings.items():
             if min_term == term:
                 all_posting_file_with_equal_term.append(index)
@@ -124,10 +142,15 @@ def merge_all_posting(stemming_mode,posting_id,number_doc_in_corpus,the_final_te
                     terms_to_updated[lowercase_term_after_stemm] = (sum_tf, list_doc)
                 else:
                     terms_to_updated[lowercase_term_after_stemm] = (sum_tf,list_doc)
-                #stemm_dictionary.pop(lowercase_term)
+            elif stemming_mode == 'yes' and lowercase_term in stemm_dictionary_values:
+                if lowercase_term in terms_to_updated:
+                    sum_tf = sum_tf + terms_to_updated[lowercase_term][0]
+                    list_doc.update(terms_to_updated[lowercase_term][1])
+                    terms_to_updated[lowercase_term] = (sum_tf, list_doc)
+                else:
+                    terms_to_updated[lowercase_term] = (sum_tf,list_doc)
             else:
                 cach_dictionary[min_term] = sum_tf
-                #print("final posting: " + min_term)
                 calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in_corpus,min_term,all_final_posting_path,number_of_line_in_abc_posting,the_final_terms_dictionary,all_city,max_doc_city)
         else:
             if min_term in terms_to_updated: # parti #the
@@ -157,21 +180,21 @@ def calculations_and_income_to_final_dictionary(list_doc,sum_tf,df,number_doc_in
     # sumtf , df ,idf
     N = number_doc_in_corpus
     idf = log2(N / df)
+    idf = "{:.3f}".format(float(idf))
+    idf = float(idf)
     sort_list_doc = list(reversed(sorted(list_doc.items(), key=lambda freq: freq[1])))
     the_abc_posting_name = find_abc_posting(min_term)
-    # print("shaked " + min_term)
-    # print(the_abc_posting_name)
-    # print(sum_tf)
-    # print(sort_list_doc)
     min_term_upper = min_term.upper()
     if min_term_upper in all_city:
-        max_doc_city[min_term_upper] = (sum_tf,sort_list_doc)
+        max_doc_city[min_term_upper] = (sum_tf, sort_list_doc)
+        all_city[min_term_upper][5] = sum_tf
+        create_posting_city(all_city,all_final_posting_path,number_of_line_in_abc_posting,min_term_upper,sort_list_doc,sum_tf)
     all_final_posting_path[the_abc_posting_name].write(min_term + "-->" + str(sum_tf) + str(sort_list_doc) + '\n')
     number_of_line_in_abc_posting[the_abc_posting_name] = number_of_line_in_abc_posting[the_abc_posting_name] + 1
     the_final_terms_dictionary[min_term] = (df, idf, sum_tf, the_abc_posting_name, number_of_line_in_abc_posting[the_abc_posting_name])
 
 
-def create_final_posting(path_folder_abc_posting,number_of_line_in_abc_posting):
+def create_final_posting(path_folder_abc_posting,number_of_line_in_abc_posting,city_path):
     all_final_posting = {}
     post1_path = path_folder_abc_posting + "\FinalPostings_a.txt"
     all_final_posting["a"] = open(post1_path, "w+")
@@ -204,6 +227,10 @@ def create_final_posting(path_folder_abc_posting,number_of_line_in_abc_posting):
     post8_path = path_folder_abc_posting + "\FinalPostings_notLetters.txt"
     all_final_posting["notLetters"] = open(post8_path, "w+")
     number_of_line_in_abc_posting["notLetters"] = 0
+
+    post9_path = city_path
+    all_final_posting["citiesPosting"] = open(post9_path, "w+")
+    number_of_line_in_abc_posting["citiesPosting"] = 0
 
     return all_final_posting
 
@@ -267,6 +294,14 @@ def find_abc_posting(min_term):
         return "notLetters"
 
 
+def create_posting_city(all_city,all_final_posting_path,number_of_line_in_abc_posting,min_term_upper,sort_list_doc,sum_tf):
+    # sort by value term
+    all_final_posting_path["citiesPosting"].write(min_term_upper + "-->" + str(sum_tf) + "(#)[" + str(sort_list_doc) + "]" + '\n')
+    number_of_line_in_abc_posting["citiesPosting"] = number_of_line_in_abc_posting["citiesPosting"] + 1
+    all_city[min_term_upper][6] = "citiesPosting"
+    all_city[min_term_upper][7] = number_of_line_in_abc_posting["citiesPosting"]
+
+
 def close_all_files(all_final_posting_path):
     for id,file in all_final_posting_path.items():
         print("close- "+id)
@@ -281,23 +316,42 @@ def handling_capitalization(term):
 
 def reset_posting():
     print("reset_posting - indexer")
-    path_folder_posting, path_folder_abc_posting,stemming_mode = init_path("yes")
-    for file in glob.glob(path_folder_abc_posting+ "/*"):
-            os.remove(file)
+    folder_path_save = Controller.get_peth_posting()
+    path_folder_posting_stemming = folder_path_save + '/Stemming'
+    path_folder_posting_withoutStemming = folder_path_save + '/WithoutStemming'
 
-    path_folder_posting, path_folder_abc_posting,stemming_mode = init_path("no")
-    for file in glob.glob(path_folder_abc_posting+ "/*"):
-            os.remove(file)
+    if os.path.exists(path_folder_posting_stemming):
+        shutil.rmtree(path_folder_posting_stemming)
+    if os.path.exists(path_folder_posting_withoutStemming):
+        shutil.rmtree(path_folder_posting_withoutStemming)
+    # if os.path.exists(folder_path_save):
+    #     shutil.rmtree(folder_path_save)
+
+    # for file in glob.glob(path_folder_abc_posting+ "/*"):
+    #         os.remove(file)
+
+    # if os.path.exists(path_folder_posting_withoutStemming):
+    #     shutil.rmtree(path_folder_posting_withoutStemming)
+    # for file in glob.glob(path_folder_abc_posting+ "/*"):
+    #         os.remove(file)
+
+    city_path = Controller.get_peth_posting() + '/' + "citiesPosting.txt"
+    os.remove(city_path)
 
 
 def reset_temp_posting():
     print("reset_temp_posting - indexer")
-    path_folder_posting, path_folder_abc_posting,stemming_mode = init_path("yes")
-    for file in glob.glob(path_folder_posting+ "/*"):
-            os.remove(file)
+    path_folder_posting, path_folder_abc_posting,stemming_mode,city_path = init_path("yes")
+    if os.path.exists(path_folder_posting):
+        shutil.rmtree(path_folder_posting)
 
-    path_folder_posting, path_folder_abc_posting,stemming_mode = init_path("no")
-    for file in glob.glob(path_folder_posting+ "/*"):
-            os.remove(file)
+    # for file in glob.glob(path_folder_posting+ "/*"):
+    #         os.remove(file)
+
+    path_folder_posting, path_folder_abc_posting,stemming_mode,city_path = init_path("no")
+    if os.path.exists(path_folder_posting):
+        shutil.rmtree(path_folder_posting)
+    # for file in glob.glob(path_folder_posting+ "/*"):
+    #         os.remove(file)
 
 
